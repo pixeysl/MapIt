@@ -1,0 +1,1 @@
+@python -m pipenv run mapit_runner.bat %*

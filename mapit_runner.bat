@@ -1,0 +1,1 @@
+@python mapit.py %*
