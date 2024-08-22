@@ -200,6 +200,7 @@ def main():
 
     # open google map in browser
     # webbrowser.open('https://www.google.com.sg/maps/search/' + addr)
-    
+
 # main
-main()
+if __name__ == "__main__":
+    main()
