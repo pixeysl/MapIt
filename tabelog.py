@@ -44,150 +44,146 @@ def parse(url):
     # url
     listtext.append(url)
 
-    rating = soup.find('b', class_='c-rating__val c-rating__val--strong')
+    # rating
+    rating = soup.find('b', attrs={"rel": "v:rating"})
     if rating:
+        rating = rating.find('span')
         rating = rating.getText()
         listtext.append('\n' + rating)
 
-    # categories
-    listtext.append('\n\nCategories:\n')
-    category = soup.find('span', attrs={"property": "v:category"})
-    if category:
-        listtext.append(category.getText())
+    # main table
+    table = soup.find('table', class_='c-table c-table--form rstinfo-table__table')
+    if table:
+        tb = table.find('tbody')
 
-    # contact
-    listtext.append('\n\nTEL/reservation\n')
-    contact = soup.find('strong', attrs={"property": "v:tel"})
-    if contact:
-        contact = contact.getText()
-        contact = rgx_newline.sub(' ', contact).strip()
-        contact = rgx_whitespace.sub(' ', contact).strip()
-        listtext.append(contact)
+        # categories
+        # print(tb.select_one('th:-soup-contains("ジャンル") + td'))
+        listtext.append('\n\nCategories:')
+        td = tb.select_one('th:-soup-contains("ジャンル") + td')
+        if td:
+            category = td.find('span')
+            if category:
+                category = category.getText()
+                category = translator.translate(category, src='ja').text
+                listtext.append('\n' + category)
 
-    reserve = soup.find('p', class_='rd-detail-info__rst-booking-status translate')
-    if reserve:
-        reserve = reserve.getText()
-        reserve = translator.translate(reserve, src='ja').text
-        listtext.append('\n' + reserve)
+        # contact
+        # print(tb.select_one('th:-soup-contains("予約・") + td'))
+        listtext.append('\n\nTEL/reservation:')
+        td = tb.select_one('th:-soup-contains("予約・") + td')
+        if td:
+            contact = td.find('strong', class_='rstinfo-table__tel-num')
+            if contact:
+                contact = contact.getText()
+                listtext.append('\n' + contact)
 
-    # address
-    listtext.append('\n\nAddress:\n')
-    addr = soup.find('p', class_='rd-detail-info__rst-address')
-    if addr:
-        addr = addr.getText()
-        addr = rgx_newline.sub('', addr)
-        addr = rgx_whitespace.sub(' ', addr).strip()
-        listtext.append(addr)
+        # reservation
+        # print(tb.select_one('th:-soup-contains("予約可否") + td'))
+        td = tb.select_one('th:-soup-contains("予約可否") + td')
+        if td:
+            reserve = td.find('p', class_='rstinfo-table__reserve-status')
+            if reserve:
+                reserve = reserve.getText()
+                reserve = translator.translate(reserve, src='ja').text
+                listtext.append('\n' + reserve)
 
-    # detailed address
-    addr = ''
-    region = soup.find('span', attrs={"property": "v:region"})
-    if region:
-        region = region.a.getText()
-        region = rgx_newline.sub('', region)
-        region = rgx_whitespace.sub(' ', region).strip()
-        addr += region + ' '
-    locality = soup.find('span', attrs={"property": "v:locality"})
-    if locality:
-        localities = locality.findAll('a')
-        for locality in localities:
-            locality = locality.getText()
-            locality = rgx_newline.sub('', locality)
-            locality = rgx_whitespace.sub(' ', locality).strip()
-            addr += locality + ' '
-    street = soup.find('span', attrs={"property": "v:street-address"})
-    if street:
-        street = street.getText()
-        street = rgx_newline.sub('', street)
-        street = rgx_whitespace.sub(' ', street).strip()
-        if street != '':
-            addr += street + ' '
-    listtext.append('\n' + addr)
+        # address
+        # print(tb.select_one('th:-soup-contains("住所") + td'))
+        listtext.append('\n\nAddress:')
+        td = tb.select_one('th:-soup-contains("住所") + td')
+        if td:
+            address = td.find('p', class_='rstinfo-table__address')
+            if address:
+                locations = address.find_all('span')
+                for location in locations:
+                    s_location = location.getText()
+                    if s_location != '':
+                        s_location = translator.translate(s_location, src='ja').text
+                        listtext.append('\n' + s_location)
 
-    # address
-    listtext.append('\n\nTransportation:\n')
-    txt_transport = soup.find(string="Transportation")
-    if txt_transport:
-        td_transport = txt_transport.parent.findNext('td')
-        if td_transport:
-            transports = td_transport.findAll('p')
+
+        # transport
+        # print(tb.select_one('th:-soup-contains("交通手段") + td'))
+        listtext.append('\n\nTransportation:')
+        td = tb.select_one('th:-soup-contains("交通手段") + td')
+        if td:
+            transports = td.find_all('p')
             for transport in transports:
-                transport =  transport.getText()
-                if not rgx_en.match(transport):
-                    try:
-                        transport = translator.translate(transport, src='ja').text
-                    except:
-                        pass
-                listtext.append(transport + '\n')
+                s_transport = transport.getText()
+                s_transport = translator.translate(s_transport, src='ja').text
+                listtext.append('\n' + s_transport)
 
-    # hours
-    listtext.append('\nOperating Hours:\n')
-    txt_operation = soup.find(string="Opening hours")
-    if txt_operation:
-        td_operation = txt_operation.parent.findNext('td')
-        if td_operation:
-            br_operation = td_operation.p.findAll('br')
-            if br_operation:
-                for operation in br_operation:
-                    str_operation = operation.previous
-                    try:
-                        str_operation = translator.translate(str_operation, src='ja').text
-                        listtext.append(str_operation + '\n')
-                    except:
-                        pass
-                # check the last line
-                str_operation = operation.next
-                try:
-                    str_operation = translator.translate(str_operation, src='ja').text
-                    listtext.append(str_operation + '\n')
-                except:
-                    pass
+        # business hours
+        # print(tb.select_one('th:-soup-contains("営業時間") + td'))
+        listtext.append('\n\nOperating Hours:')
+        td = tb.select_one('th:-soup-contains("営業時間") + td')
+        if td:
+            # opening hours
+            weeks = td.find_all('li', class_='rstinfo-table__business-item')
+            for week in weeks:
+                day = week.find('p', class_='rstinfo-table__business-title')
+                if day:
+                    s_day = day.getText()
+                    s_day = rgx_newline.sub(' ', s_day).strip()
+                    s_day = rgx_whitespace.sub(' ', s_day).strip()
+                    s_day = translator.translate(s_day, src='ja').text
+                    listtext.append('\n' + s_day)
+                hours = week.find_all('li', class_='rstinfo-table__business-dtl-text')
+                for hour in hours:
+                    s_hour = hour.getText()
+                    s_hour = translator.translate(s_hour, src='ja').text
+                    listtext.append('\n' + s_hour)
+                    if hour.p:
+                        s_hour = translator.translate(hour.p.getText(), src='ja').text
+                        listtext.append('\n' + s_hour)
+            # regular holiday
+            weeks = td.find_all('div', class_='rstinfo-table__business-other')
+            for week in weeks:
+                holidays = week.find_all('li', class_='rstinfo-table__business-item')
+                for holiday in holidays:
+                    s_holiday = holiday.getText()
+                    s_holiday = rgx_newline.sub(' ', s_holiday).strip()
+                    s_holiday = rgx_whitespace.sub(' ', s_holiday).strip()
+                    s_holiday = translator.translate(s_holiday, src='ja').text
+                    listtext.append('\n' + s_holiday)
+
+        # budget
+        # print(tb.select_one('th:-soup-contains("予算") + td'))
+        listtext.append('\n\nBudget:')
+        td = tb.select_one('th:-soup-contains("予算") + td')
+        if td:
+            budgets = td.find_all('p', class_='rstinfo-table__budget-item')
+            if not budgets:
+                # no p, try to find span
+                budgets = td.find_all('span', class_='rstinfo-table__budget-item')
+            for budget in budgets:
+                if budget.i:
+                    s_budget = budget.i.get('aria-label')
+                    listtext.append('\n' + s_budget + ' ')
+                if budget.em:
+                    s_budget = budget.em.getText()
+                    listtext.append(s_budget)
 
 
-    # fixed holidays
-    listtext.append('\nFixed holidays:\n')
-    txt_operation = soup.find(string="Fixed holidays")
-    if txt_operation:
-        td_operation = txt_operation.parent.findNext('td')
-        if td_operation:
-            operation = td_operation.p.getText()
-            if operation != '':
-                operation = translator.translate(operation, src='ja').text
-                listtext.append(operation)
+        # payment method
+        # print(tb.select_one('th:-soup-contains("支払い方法") + td'))
+        listtext.append('\n\nPayment:')
+        td = tb.select_one('th:-soup-contains("支払い方法") + td')
+        if td:
+            payments = td.find_all('div', class_='rstinfo-table__pay-item')
+            for payment in payments:
+                if payment.p:
+                    s_payment = translator.translate(payment.p.getText(), src='ja').text
+                    listtext.append('\n' + s_payment)
 
-    # budget
-    listtext.append('\n\nBudget:\n')
-    budget = soup.find('span', class_='c-rating__time c-rating__time--dinner')
-    if budget:
-        budget_dinner = budget.findNextSibling()
-        if budget_dinner:
-            budget_dinner = budget_dinner.getText()
-            listtext.append('Dinner: ' + budget_dinner)
-    budget = soup.find('span', class_='c-rating__time c-rating__time--lunch')
-    if budget:
-        budget_lunch = budget.findNextSibling()
-        if budget_lunch:
-            budget_lunch = budget_lunch.getText()
-            listtext.append('\nLunch: ' + budget_lunch)
+        fulltext = '' 
+        fulltext = fulltext.join(listtext)
+        print(fulltext)
+        to_file('fulltext.txt', 'w', fulltext)
 
-    # payment
-    listtext.append('\n\nPayment:\n')
-    txt_payment = soup.find(string="Method of payment")
-    if txt_payment:
-        td_payment = txt_payment.parent.findNext('td')
-        if td_payment:
-            payments = td_payment.findAll('div')
-            if payments:
-                for payment in payments:
-                    payment = payment.p.getText()
-                    listtext.append(payment + '\n')
 
-    fulltext = '' 
-    fulltext = fulltext.join(listtext)
-    print(fulltext)
-    to_file('fulltext.txt', 'w', fulltext)
-    
-    return addr
+        return
+
 
 def main():
     if len(sys.argv) > 1:
