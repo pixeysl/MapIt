@@ -64,6 +64,8 @@ def parse(url):
             category = td.find('span')
             if category:
                 category = category.getText()
+                category = rgx_newline.sub(' ', category).strip()
+                category = rgx_whitespace.sub(' ', category).strip()
                 category = translator.translate(category, src='ja').text
                 listtext.append('\n' + category)
 
@@ -135,13 +137,16 @@ def parse(url):
                     listtext.append('\n' + s_hour)
                     if hour.p:
                         s_hour = translator.translate(hour.p.getText(), src='ja').text
-                        listtext.append('\n' + s_hour)
+                        # sometimes .p text is a repeat
+                        if not s_hour in listtext[-1]:
+                            listtext.append('\n' + s_hour)
             # regular holiday
             weeks = td.find_all('div', class_='rstinfo-table__business-other')
             for week in weeks:
                 holidays = week.find_all('li', class_='rstinfo-table__business-item')
                 for holiday in holidays:
                     s_holiday = holiday.getText()
+                    s_holiday = s_holiday.replace("■", "")
                     s_holiday = rgx_newline.sub(' ', s_holiday).strip()
                     s_holiday = rgx_whitespace.sub(' ', s_holiday).strip()
                     s_holiday = translator.translate(s_holiday, src='ja').text
